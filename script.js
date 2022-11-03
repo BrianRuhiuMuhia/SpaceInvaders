@@ -1,56 +1,63 @@
- 2const canvas=document.querySelector("canvas")
+const canvas=document.querySelector("canvas")
 const ctx=canvas.getContext("2d")
 const canvas_width=canvas.width=800
 const canvas_height=canvas.height=600
 window.addEventListener("load",function()
 {
-    const max=100
-    let count=0
-    let bullets=[]
-    let enemyBullets=[]
-    let gridArray=[]
-    function Game()
+    const max=10000
+    function Game(ctx,canvasWidth,canvasHeight)
     {
+        this.count=0
+this.ctx=ctx
+this.canvasWidth=canvasWidth
+this.canvasHeight=canvasHeight
+        this.bullets=[]
+        this.enemyBullets=[]
+        this.gridArray=[]
         this.background=new Background(this)
         this.player=new Player(this)
         this.grid=new Grid(this)
     }
     Game.prototype.draw=function(asset)
     {
-        ctx.drawImage(asset.sprite,asset.x,asset.y,asset.width,asset.height)
+        this.ctx.drawImage(asset.sprite,asset.x,asset.y,asset.width,asset.height)
     }
     Game.prototype.update=function()
     {
         this.player.update()
-        bullets=bullets.filter((bullet)=>!bullet.delete)
-        bullets.forEach((bullet)=>{
+        this.bullets=this.bullets.filter((bullet)=>!bullet.delete)
+        this.bullets.forEach((bullet)=>{
             bullet.update("player")
         })
-        this.grid.update()
     }
     Game.prototype.drawImages=function(deltaTime)
     {
         this.background.draw()
         this.player.draw()
-        bullets.forEach((bullet)=>{
+        this.bullets.forEach((bullet)=>{
             bullet.draw()
         })
-        this.grid.enemyArray.forEach((enemy)=>{
-            enemy.draw()   
-            enemy.update()
-        })
-       
-        if(count>max)
+        if(this.count>max)
         {
-            gridArray.push(new Grid(this))
-            this.grid.enemyArray[Math.floor(Math.random() * this.grid.enemyArray.length)].shoot()
-            count=0
+            this.gridArray.push(new Grid(this))
+            const randomNumber=Math.floor(Math.random() * this.gridArray.length)
+            this.gridArray[randomNumber].enemyArray[Math.floor(Math.random() * this.gridArray[randomNumber].enemyArray.length)].shoot()
+            this.count=0
         }
 else{
-    count+=deltaTime
+    this.count+=deltaTime
 }
-        enemyBullets=enemyBullets.filter((bullet)=>!bullet.delete)
-        enemyBullets.forEach((bullet)=>{
+this.gridArray=this.gridArray.filter((grid)=>!grid.delete)
+this.gridArray.forEach((grid)=>
+{
+    grid.update()
+    grid.enemyArray.forEach((enemy)=>{
+        enemy.draw()   
+        enemy.update()
+    })
+})
+        this.enemyBullets=this.enemyBullets.filter((bullet)=>!bullet.delete)
+        this.enemyBullets.forEach((bullet)=>{
             
             bullet.draw("enemy")
             bullet.update('enemy')
@@ -61,8 +68,8 @@ else{
         this.game=game
         this.x=0
         this.y=0
-        this.width=canvas_width
-        this.height=canvas_height
+        this.width=this.game.canvasWidth
+        this.height=this.game.canvasHeight
         this.sprite=document.getElementById("background")
     }
     Background.prototype.draw=function()
@@ -118,7 +125,7 @@ else{
     Player.prototype.shoot=function()
     {
 this.bullet=new Bullet(this)
-bullets.push(this.bullet)
+game.bullets.push(this.bullet)
     }
     function Bullet(ship)
     {
@@ -133,10 +140,11 @@ Bullet.prototype.draw=function(type)
 {
     if(type==="enemy")
     {
-        this.width=20
+this.width=20
 this.height=20
+this.speed=5
         this.sprite=document.getElementById("enemyBullet")
-        ctx.drawImage(this.sprite,this.x,this.enemyY,this.width,this.height)
+        game.ctx.drawImage(this.sprite,this.x,this.enemyY,this.width,this.height)
     }
     else{
         this.width=25
@@ -154,11 +162,10 @@ this.height=25
 }
 Bullet.prototype.update=function(type)
 {
-    //that's why i love java method overloading ,used if statement to try to minic method overloading
 if(type==="enemy")
 {
     this.enemyY+=this.speed
-    if(this.enemyY>=canvas_width)
+    if(this.enemyY>=game.canvasWidth)
     {
         this.delete=true
     }
@@ -174,9 +181,11 @@ else if(type==="player")
 }
 function Grid(game)
 {
-    this.game=game
+this.game=game
 this.x=0
 this.y=0
+this.size=30
+this.delete=false
 this.cols=Math.floor(Math.random() * 6 +1)
 this.rows=Math.floor(Math.random()*6 +1)
 this.enemyArray=[]
@@ -188,11 +197,16 @@ for(let i=0;i<this.rows;i++)
 this.enemyArray.push(new Enemy(this,{x:j,y:i}))
     }
 }
-this.width=30 * this.cols
+this.width=this.size * this.cols
+this.height=this.size * this.rows
 }
 Grid.prototype.update=function()
 {
-    if((this.x*30) + this.width>=canvas_width || this.x <0)
+    if((this.y *this.size) + this.height>=this.game.canvasHeight+50)
+    {
+        this.delete=true
+    }
+    if((this.x*this.size) + this.width>=this.game.canvasWidth || this.x <0)
     {
         this.velocity.vx=-this.velocity.vx
         this.y+=this.velocity.vy
@@ -203,8 +217,8 @@ function Enemy(grid,position)
 {
 this.grid=grid
 this.game=this.grid.game
-this.width=30
-this.height=30
+this.width=grid.size
+this.height=grid.size
 this.position=position
 this.x=this.grid.x + position.x
 this.y=this.grid.y + position.y
@@ -221,7 +235,7 @@ Enemy.prototype.update=function()
 }
 Enemy.prototype.shoot=function()
 {
-    enemyBullets.push(new Bullet({
+    this.grid.game.enemyBullets.push(new Bullet({
         sprite:this.sprite,
         x:this.x * this.width,
         y:this.y * this.height,
@@ -230,7 +244,7 @@ Enemy.prototype.shoot=function()
         delete:false
     }))
 }
-const game=new Game()
+const game=new Game(ctx,canvas_width,canvas_height)
     document.addEventListener("keydown",function(event)
     {
         switch(event.key)
