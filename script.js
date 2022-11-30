@@ -2,6 +2,7 @@ const canvas=document.querySelector("canvas")
 const ctx=canvas.getContext("2d")
 const canvas_width=canvas.width=800
 const canvas_height=canvas.height=600
+let gameOver=false
 window.addEventListener("load",function()
 {
     let deltaTime=undefined
@@ -83,25 +84,36 @@ this.boomArray=this.boomArray.filter((boom)=>{
             score+=1
             let x=enemy.x * enemy.width
             let y=enemy.y * enemy.height
-            explosion.play()
+            try{
+                explosion.play()
+            }
+        catch(err){
+console.log(err)
+        }
+           
             this.boomArray.push(new Boom(x,y))
                 }
         })
     })
 })
-//fix this collision detection algorithm does not work
-this.enemyBullets.forEach((bullet)=>{
-    if(this.player.x + this.player.width >= bullet.x && this.player.x <= bullet.x + bullet.width && this.player.y + this.player.height >= bullet.y && this.player.y <= bullet.y + bullet.height)
-    {
-console.log("collision")
-    }
-})
-//
         this.enemyBullets=this.enemyBullets.filter((bullet)=>!bullet.delete)
         this.enemyBullets.forEach((bullet)=>{
             
             bullet.draw("enemy")
             bullet.update('enemy')
+            let y1=this.player.y + this.player.height/2
+            let y2=bullet.enemyY + bullet.height/2
+            let x1=this.player.x + this.player.width/2
+            let x2=bullet.x + bullet.width/2
+            let dist=Math.sqrt(Math.pow((y1-y2),2) +(Math.pow((x1-x2),2)))
+            if(dist<(this.player.width/2 + bullet.width/2))
+            {
+this.boomArray.push(new Boom(this.player.x,this.player.y,60,60))
+                this.player.width=0
+                this.player.height=0
+                gameOver=true
+            }
+
         })
     }
     function Background(game)
@@ -163,6 +175,7 @@ console.log("collision")
         {
             this.x=0
         }
+        
     }
     Player.prototype.isUp=function()
     {
@@ -176,7 +189,6 @@ if(this.shootBullet)
 game.bullets.push(this.bullet)
 laser.play()
 this.shootBullet=false
-
 }
    
     }
@@ -299,12 +311,13 @@ Enemy.prototype.shoot=function()
         delete:false
     }))
 }
-function Boom(x,y) {
+
+function Boom(x,y,width=30,height=30) {
       this.image = document.getElementById("cloud_sprite");
       this.spriteWidth = 92;
       this.spriteHeight = 181;
-      this.width = 30;
-      this.height = 30;
+      this.width = width;
+      this.height = height;
       this.x = x;
       this.y = y;
       this.delete = false;
@@ -338,36 +351,38 @@ Boom.prototype.update=function() {
         this.interval = 0;
       } else this.interval += 2;
     }
-const game=new Game(ctx,canvas_width,canvas_height)
+let game=new Game(ctx,canvas_width,canvas_height)
 function displayText() {
     ctx.fillStyle = "white";
     ctx.fillText(`Score:${score}`, 0, 55);
     ctx.font = "30px cursive";
 
-    // if (gameOver) {
-    //   ctx.textAlign = "center";
-    //   ctx.fillStyle = "black";
-    //   ctx.fillText(`Game Over`, canvas_width / 2, canvas_height / 2);
-    //   ctx.font = "50px cursive";
-    //   ctx.textAlign = "center";
-    //   ctx.fillStyle = "black";
-    //   ctx.font = "50px cursive";
-    //   ctx.fillText(
-    //     `Press Enter To Restart`,
-    //     canvas_width / 2,
-    //     canvas_height / 2 - 50,
-    //   );
-    //   ctx.fillStyle = "white";
-    //   ctx.font = "50px cursive";
-    //   ctx.fillText(
-    //     `Press Enter To Restart`,
-    //     canvas_width / 2,
-    //     canvas_height / 2 - 55,
-    //   );
-    // }
+    if (gameOver) {
+    ctx.save()
+      ctx.textAlign = "center";
+      ctx.fillStyle = "black";
+      ctx.fillText(`Game Over`, canvas_width / 2, canvas_height / 2);
+      ctx.font = "50px cursive";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "black";
+      ctx.font = "50px cursive";
+      ctx.fillText(
+        `Press Enter To Restart`,
+        canvas_width / 2,
+        canvas_height / 2 - 50,
+      );
+      ctx.fillStyle = "white";
+      ctx.font = "50px cursive";
+      ctx.fillText(
+        `Press Enter To Restart`,
+        canvas_width / 2,
+        canvas_height / 2 - 55,
+      );
+    ctx.restore()
+    }
   }
 setInterval(function()
-{
+{ 
     if(game.gridArray.length<4)
     game.gridArray.push(new Grid(game))
 },2000)
@@ -382,10 +397,20 @@ case "ArrowRight":
     game.player.moveRight()
     break
 case "ArrowUp":
-    game.player.shoot(event.key)
+    game.player.shoot()
+    break
+case "Enter":
+    restart()
 break
         }
-    })
+    }) 
+function restart()
+    {
+score=0
+gameOver=false
+game=new Game(ctx,canvas_width,canvas_height)
+animate(0)
+    }
     document.addEventListener('keyup',function(event)
     {
         if(event.key==="ArrowUp")
@@ -402,16 +427,7 @@ game.drawImages(deltaTime)
 game.update()
 displayText()
 interval=timeStamp
-        requestAnimationFrame(animate)
+       if(!gameOver) requestAnimationFrame(animate)
     }
     animate(0)
 })
-//when finished,refactor your code,make it more dry//lots of code duplication 
-//sprite animation for player bullet hitting the enemy
-//game over code
-//enemy hitting the player
-//use modules => it too late can't change
-//add sound effects
-//code duplication using filter,make a function
-//similar methods should be grouped together
-//login for each player
